@@ -20,7 +20,6 @@ pub static kCGEventKeyDown: CGEventType = 10;
 pub static kCGEventMouseMoved: CGEventType = 5;
 use std::mem;
 
-
 pub type CGEventTapCallBack = extern fn(CGEventTapProxy, CGEventType,
                                         CGEventRef, *const libc::c_void)
     -> CGEventRef;
@@ -52,7 +51,7 @@ pub struct Listener <'a> {
 extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
                           event: CGEventRef, arg: *const libc::c_void)
     -> CGEventRef {
-    let listener: &mut Listener = unsafe {
+    let listener: &Listener = unsafe {
         mem::transmute(arg)
     };
     if event_type == kCGEventMouseMoved {
@@ -67,13 +66,13 @@ extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
 }
 
 impl<'a> Listener <'a> {
-    pub fn listen(&mut self) {
+    pub fn listen(&self) {
         let key_down = 1 << kCGEventKeyDown;
         let mouse_moved = 1 << kCGEventMouseMoved;
         unsafe {
             let tap = CGEventTapCreate(0, 0, 0, key_down | mouse_moved,
                                        logger_callback,
-                                       self as *mut _ as *const libc::c_void);
+                                       self as *const _ as *const libc::c_void);
 
             if tap.is_null() {
                 panic!("This program needs to run as root");
