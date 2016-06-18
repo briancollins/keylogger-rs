@@ -13,12 +13,9 @@ pub type CGEventMask = libc::uint64_t;
 pub type CFRunLoopSourceRef = *const libc::c_void;
 pub type CFStringRef = *const libc::c_void;
 
-pub type Boolean = u8;
-
 pub struct __CFBoolean(libc::c_void);
 
 pub type CFBooleanRef = *const __CFBoolean;
-pub struct CFBoolean(CFBooleanRef);
 pub static kCGEventKeyDown: CGEventType = 10;
 pub static kCGEventMouseMoved: CGEventType = 5;
 
@@ -29,10 +26,8 @@ pub type CGEventTapCallBack = extern fn(CGEventTapProxy, CGEventType,
 
 extern {
     pub static kCFBooleanTrue: CFBooleanRef;
-    pub static kCFBooleanFalse: CFBooleanRef;
 
     pub static kCFRunLoopDefaultMode: CFStringRef;
-    pub static kCFRunLoopCommonModes: CFStringRef;
     pub fn CFRunLoopGetCurrent() -> CFRunLoopRef;
     pub fn CGEventTapCreate(tap: libc::uint32_t, place: libc::uint32_t,
                             options: libc::uint32_t, events: CGEventMask,
