@@ -18,8 +18,9 @@ pub struct __CFBoolean(libc::c_void);
 
 pub type CFBooleanRef = *const __CFBoolean;
 pub struct CFBoolean(CFBooleanRef);
+pub static kCGEventKeyDown: CGEventType = 10;
+pub static kCGEventMouseMoved: CGEventType = 5;
 
-// CGEventRef loggerCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void* context)
 
 pub type CGEventTapCallBack = extern fn(CGEventTapProxy, CGEventType, CGEventRef, *const libc::c_void) -> CGEventRef;
 
@@ -30,30 +31,45 @@ extern {
     pub static kCFRunLoopDefaultMode: CFStringRef;
     pub static kCFRunLoopCommonModes: CFStringRef;
     pub fn CFRunLoopGetCurrent() -> CFRunLoopRef;
-    pub fn CGEventTapCreate(tap: libc::uint32_t, place: libc::uint32_t, options: libc::uint32_t, eventsOfInterest: CGEventMask, callback: CGEventTapCallBack, userInfo: *const libc::c_void ) -> CFMachPortRef;
-    pub fn CFMachPortCreateRunLoopSource(allocator: *const libc::c_void, port: CFMachPortRef,
-                                         order: libc::uint64_t) -> CFRunLoopSourceRef;
-    pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFStringRef);
+    pub fn CGEventTapCreate(tap: libc::uint32_t, place: libc::uint32_t,
+                            options: libc::uint32_t, events: CGEventMask,
+                            callback: CGEventTapCallBack,
+                            user_info: *const libc::c_void ) -> CFMachPortRef;
+    pub fn CFMachPortCreateRunLoopSource(allocator: *const libc::c_void,
+                                         port: CFMachPortRef,
+                                         order: libc::uint64_t)
+        -> CFRunLoopSourceRef;
+    pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef,
+                              mode: CFStringRef);
     pub fn CGEventTapEnable(tap: CFMachPortRef, enable: CFBooleanRef);
     pub fn CFRunLoopRun();
 }
 
-extern fn logger_callback(proxy: CGEventTapProxy, eventType: CGEventType, event: CGEventRef, context: *const libc::c_void) -> CGEventRef {
-    println!("keystroke detected");
+extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
+                          event: CGEventRef, _: *const libc::c_void) 
+    -> CGEventRef {
+    if event_type == kCGEventKeyDown {
+        println!("Key down!");
+    } else if event_type == kCGEventMouseMoved {
+        println!("Mouse moved!");
+    }
     event
 }
 
 
 fn main() {
-    let key_down = 1 << 10;
-    let tap = unsafe { CGEventTapCreate(0, 0, 0, key_down, logger_callback, std::ptr::null()) };
-    if tap.is_null() {
-        panic!("You need to run as root");
-    }
-
-    let source = unsafe { CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0) };
-    let run_loop = unsafe { CFRunLoopGetCurrent() };
+    let key_down = 1 << kCGEventKeyDown;
+    let mouse_moved = 1 << kCGEventMouseMoved;
     unsafe {
+        let tap = CGEventTapCreate(0, 0, 0, key_down | mouse_moved,
+                                   logger_callback, std::ptr::null());
+
+        if tap.is_null() {
+            panic!("This program needs to run as root");
+        }
+
+        let source = CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0);
+        let run_loop = CFRunLoopGetCurrent();
         CFRunLoopAddSource(run_loop, source, kCFRunLoopDefaultMode);
         CGEventTapEnable(tap, kCFBooleanTrue);
         CFRunLoopRun();
