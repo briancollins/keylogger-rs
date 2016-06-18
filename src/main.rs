@@ -1,3 +1,4 @@
+#![allow(non_upper_case_globals, improper_ctypes)]
 extern crate libc;
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -46,7 +47,7 @@ extern {
 }
 
 extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
-                          event: CGEventRef, _: *const libc::c_void) 
+                          event: CGEventRef, _: *const libc::c_void)
     -> CGEventRef {
     if event_type == kCGEventKeyDown {
         println!("Key down!");
