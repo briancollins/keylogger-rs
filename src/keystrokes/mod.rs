@@ -18,11 +18,13 @@ pub struct __CFBoolean(libc::c_void);
 pub type CFBooleanRef = *const __CFBoolean;
 pub static kCGEventKeyDown: CGEventType = 10;
 pub static kCGEventMouseMoved: CGEventType = 5;
+use std::mem;
 
 
 pub type CGEventTapCallBack = extern fn(CGEventTapProxy, CGEventType,
                                         CGEventRef, *const libc::c_void)
     -> CGEventRef;
+
 
 extern {
     pub static kCFBooleanTrue: CFBooleanRef;
@@ -43,32 +45,45 @@ extern {
     pub fn CFRunLoopRun();
 }
 
+pub struct Listener <'a> {
+    pub mouse_moved_callback: Option<&'a Fn(i32)>,
+}
+
 extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
-                          event: CGEventRef, _: *const libc::c_void)
+                          event: CGEventRef, arg: *const libc::c_void)
     -> CGEventRef {
-    if event_type == kCGEventKeyDown {
-        println!("Key down!");
-    } else if event_type == kCGEventMouseMoved {
-        println!("Mouse moved!");
+    let listener: &mut Listener = unsafe {
+        mem::transmute(arg)
+    };
+    if event_type == kCGEventMouseMoved {
+        match listener.mouse_moved_callback {
+            Some(x) => x(1),
+            _ => ()
+        }
+    } else if event_type == kCGEventKeyDown {
+        println!("Key down");
     }
     event
 }
 
-pub fn listen() {
-    let key_down = 1 << kCGEventKeyDown;
-    let mouse_moved = 1 << kCGEventMouseMoved;
-    unsafe {
-        let tap = CGEventTapCreate(0, 0, 0, key_down | mouse_moved,
-                                   logger_callback, ::std::ptr::null());
+impl<'a> Listener <'a> {
+    pub fn listen(&mut self) {
+        let key_down = 1 << kCGEventKeyDown;
+        let mouse_moved = 1 << kCGEventMouseMoved;
+        unsafe {
+            let tap = CGEventTapCreate(0, 0, 0, key_down | mouse_moved,
+                                       logger_callback, self as *mut _ as *const libc::c_void);
 
-        if tap.is_null() {
-            panic!("This program needs to run as root");
+            if tap.is_null() {
+                panic!("This program needs to run as root");
+            }
+
+            let source = CFMachPortCreateRunLoopSource(::std::ptr::null(), tap, 0);
+            let run_loop = CFRunLoopGetCurrent();
+            CFRunLoopAddSource(run_loop, source, kCFRunLoopDefaultMode);
+            CGEventTapEnable(tap, kCFBooleanTrue);
+            CFRunLoopRun();
         }
-
-        let source = CFMachPortCreateRunLoopSource(::std::ptr::null(), tap, 0);
-        let run_loop = CFRunLoopGetCurrent();
-        CFRunLoopAddSource(run_loop, source, kCFRunLoopDefaultMode);
-        CGEventTapEnable(tap, kCFBooleanTrue);
-        CFRunLoopRun();
     }
 }
+
