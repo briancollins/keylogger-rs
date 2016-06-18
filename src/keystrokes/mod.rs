@@ -72,13 +72,16 @@ impl<'a> Listener <'a> {
         let mouse_moved = 1 << kCGEventMouseMoved;
         unsafe {
             let tap = CGEventTapCreate(0, 0, 0, key_down | mouse_moved,
-                                       logger_callback, self as *mut _ as *const libc::c_void);
+                                       logger_callback,
+                                       self as *mut _ as *const libc::c_void);
 
             if tap.is_null() {
                 panic!("This program needs to run as root");
             }
 
-            let source = CFMachPortCreateRunLoopSource(::std::ptr::null(), tap, 0);
+            let source = CFMachPortCreateRunLoopSource(
+                ::std::ptr::null(), tap, 0
+                );
             let run_loop = CFRunLoopGetCurrent();
             CFRunLoopAddSource(run_loop, source, kCFRunLoopDefaultMode);
             CGEventTapEnable(tap, kCFBooleanTrue);
