@@ -46,6 +46,7 @@ extern {
 
 pub struct Listener <'a> {
     pub mouse_moved_callback: Option<&'a Fn(i32)>,
+    pub key_down_callback: Option<&'a Fn(i32)>,
 }
 
 extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
@@ -60,7 +61,10 @@ extern fn logger_callback(_: CGEventTapProxy, event_type: CGEventType,
             _ => ()
         }
     } else if event_type == kCGEventKeyDown {
-        println!("Key down");
+        match listener.key_down_callback {
+            Some(x) => x(1),
+            _ => ()
+        }
     }
     event
 }
